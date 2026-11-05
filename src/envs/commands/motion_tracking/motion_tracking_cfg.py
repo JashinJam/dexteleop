@@ -15,6 +15,7 @@ if TYPE_CHECKING:
 class MotionSamplingCfg:
     mode: Literal["uniform", "start"] = "uniform"
     start_frame: int = 0
+    source_episode_balance: bool = False
 
 
 @dataclass(kw_only=True)

@@ -51,6 +51,21 @@ class IsaacMotionTrackingCommand(MotionTrackingCommand):
             counts[s] = r.numel()
         self._slot_motion_table = table
         self._slot_motion_count = counts
+        self._slot_motion_cdf = None
+        if self.cfg.sampling.source_episode_balance:
+            from collections import Counter
+            episodes = [name.rsplit('__st', 1)[0] for name in self.motion_lib.motion_files]
+            sizes = Counter(episodes)
+            weights = torch.tensor([1.0/sizes[e] for e in episodes], device=self.device)
+            probability = weights[table]
+            probability *= torch.arange(table.shape[1], device=self.device)[None] < counts[:, None]
+            probability /= probability.sum(1, keepdim=True).clamp(min=1e-12)
+            self._slot_motion_cdf = probability.cumsum(1)
+            self.source_sampling_counts = torch.zeros(self.motion_lib.num_trajectories, dtype=torch.long, device=self.device)
+            self.source_sampling_probability = weights / weights.sum()
+            allocation = torch.bincount(self._env.scene.assigned_obj_slot, minlength=S).float()
+            effective = probability * (allocation / allocation.sum())[:, None]
+            self.source_sampling_allocated_probability = torch.zeros_like(weights).scatter_add_(0, table.flatten(), effective.flatten())
 
     def _resample_command(self, env_ids: torch.Tensor) -> None:
         assigned = getattr(self._env.scene, "assigned_obj_slot", None)
@@ -68,7 +83,12 @@ class IsaacMotionTrackingCommand(MotionTrackingCommand):
         r = torch.rand(len(env_ids), device=self.device)
         idx = (r * counts.float()).long().clamp(max=int(counts.max().item()) - 1)
         idx = torch.minimum(idx, counts - 1)
+        if self._slot_motion_cdf is not None:
+            idx = torch.searchsorted(self._slot_motion_cdf[slot].contiguous(), r[:, None]).squeeze(1)
+            idx = torch.minimum(idx, counts - 1)
         self.motion_ids[env_ids] = self._slot_motion_table[slot, idx]
+        if self._slot_motion_cdf is not None:
+            self.source_sampling_counts += torch.bincount(self.motion_ids[env_ids], minlength=self.motion_lib.num_trajectories)
 
         prev = self._eval_mode
         self._eval_mode = True

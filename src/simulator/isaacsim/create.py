@@ -97,6 +97,13 @@ def _alloc_by_motion_count(cfg, traj_slot: torch.Tensor, S: int) -> torch.Tensor
     every slot with motions >= 1 env)."""
     num_envs = int(cfg.scene.num_envs)
     counts = torch.bincount(traj_slot, minlength=S).float()
+    if cfg.commands.sampling.get('source_episode_balance', False):
+        from collections import Counter
+        packed = torch.load(str(cfg.commands.motion_file), map_location='cpu', weights_only=False)
+        episodes = [name.rsplit('__st', 1)[0] for name in packed['motion_filename']]
+        sizes = Counter(episodes)
+        weights = torch.tensor([1.0/sizes[e] for e in episodes])
+        counts = torch.zeros(S).scatter_add_(0, traj_slot.cpu(), weights)
     n_used = int((counts > 0).sum())
     if num_envs < n_used:
         raise ValueError(

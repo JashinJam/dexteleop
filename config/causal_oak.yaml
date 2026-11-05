@@ -1,0 +1,32 @@
+# Independent S2 entry: original flashdexretarget defaults remain unchanged.
+defaults:
+  - flashdexretarget
+  - override envs/robot@robot: sharpa_bimanual
+  - override envs/actions@actions: causal
+  - override envs/obs@obs: causal
+  - override envs/rewards@rewards: causal
+  - _self_
+
+share_actor_critic_obs: false
+num_envs: 1024
+num_env_steps: 60000000
+commands:
+  sampling:
+    source_episode_balance: true
+runner:
+  agent:
+    buffer_max_length: 2500000
+    buffer_min_length: 50000
+    buffer_device_type: cpu
+    sample_batch_size: 2048
+    buffer_compact_obs: false
+    asymmetric_observation: true
+    traj_encoder:
+      enable: false
+    learning_rate_warmup_step: 0
+    learning_rate_decay_step: 390625
+curriculum:
+  xfrc_curriculum_adaptive:
+    params:
+      reward_terms:
+        bc: [tracking_causal_finger_intent_exp]

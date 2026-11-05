@@ -1,0 +1,9 @@
+# @package _global_
+actions:
+  name: causal_fingers
+  _target_: envs.actions.causal.CausalActionCfg
+  entity_name: ${robot.entity_name}
+  command_name: ${commands.name}
+  command_cache: ???
+  residual_limit: 0.15
+  zero_residual: false
