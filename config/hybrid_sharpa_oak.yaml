@@ -1,0 +1,6 @@
+# S2b retains S2 data/reward/network configuration; the control interface changes.
+defaults:
+  - causal_oak
+  - override envs/actions@actions: hybrid_sharpa
+  - override envs/obs@obs: hybrid_sharpa
+  - _self_

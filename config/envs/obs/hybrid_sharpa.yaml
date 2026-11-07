@@ -1,0 +1,9 @@
+# @package _global_
+defaults:
+  - causal
+  - _self_
+obs:
+  _target_: envs.observations.hybrid_sharpa.HybridSharpaObs
+  obs_dict:
+    actor_obs: [causal_command_history, causal_proprioception, hybrid_wrist_reference]
+    critic_obs: [causal_command_history, causal_proprioception, hybrid_wrist_reference, ref_future_traj_wrist, robot_wrist_pose_w, robot_wrist_lin_vel_w, robot_wrist_ang_vel_w, robot_joint_pos, robot_joint_vel, robot_tip_trans_wrist, robot_tip_lin_vel_wrist, dof_target_pos, ref_future_mano_body_delta_w, obj_trans_wrist, obj_quat_wrist, obj_lin_vel_wrist, obj_ang_vel_wrist, obj_point_cloud_wrist, ref_future_obj_trans_delta_wrist, ref_future_obj_quat_delta_wrist, ref_future_obj_point_cloud_delta_wrist, robot_body_contact_wrench_wrist, robot_body_contact_trans_wrist, robot_links_obj_sdf, robot_links_obj_normal_wrist]

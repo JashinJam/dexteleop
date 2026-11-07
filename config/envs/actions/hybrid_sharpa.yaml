@@ -1,0 +1,11 @@
+# @package _global_
+actions:
+  name: hybrid_sharpa
+  _target_: envs.actions.hybrid_sharpa.HybridSharpaActionCfg
+  entity_name: ${robot.entity_name}
+  command_name: ${commands.name}
+  command_cache: ???
+  wrist_translation_scale: 0.1
+  wrist_rotation_scale: 1.0
+  wrist_cutoff_hz: 5.0
+  zero_residual: false
