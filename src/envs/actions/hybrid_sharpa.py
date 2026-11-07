@@ -41,6 +41,7 @@ class HybridSharpaAction(CausalAction):
         self._all_joint_ids = torch.cat([self._wrist_ids, self._finger_ids])
         self._hybrid_raw = torch.zeros(self.num_envs, 56, device=self.device)
         self._hybrid_filtered = self._hybrid_raw.clone()
+        self._control_frame = torch.zeros(self.num_envs, dtype=torch.long, device=self.device)
         self._wrist_pending = torch.ones(self.num_envs, dtype=torch.bool, device=self.device)
         self._wrist_scale = torch.tensor(
             [cfg.wrist_translation_scale] * 3 + [cfg.wrist_rotation_scale] * 3,
@@ -80,6 +81,7 @@ class HybridSharpaAction(CausalAction):
         self.state.raw.copy_(self._hybrid_raw[:, 12:])
         self.state.filtered.copy_(self._hybrid_filtered[:, 12:])
         command = self._env.command_manager.get_term(self.cfg.command_name)
+        self._control_frame.copy_(command.motion_steps)
         self.ref_joint_pos_used.copy_(command.ref_joint_pos)
         self.ref_joint_pos_used[:, self._finger_ids] = self.state.finger_q
         self._target.copy_(self.ref_joint_pos_used)

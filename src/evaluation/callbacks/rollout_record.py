@@ -16,9 +16,11 @@ class RolloutRecord:
         self,
         command_name: str = "motion",
         enabled: bool = True,
+        record_control: bool = False,
     ) -> None:
         self.command_name = str(command_name)
         self.enabled = bool(enabled)
+        self.record_control = bool(record_control)
         self.rollout_steps = 1
         self._frames: list[torch.Tensor] = []
         self._roll_spec: list[tuple[str, int, tuple[int, ...]]] = []
@@ -52,6 +54,15 @@ class RolloutRecord:
             ("obj_pos", 3 * self.num_sides, tail + (3,)),
             ("obj_quat", 4 * self.num_sides, tail + (4,)),
         ]
+        if self.record_control:
+            from envs._common import action_term
+            self._control = action_term(env)
+            assert hasattr(self._control, "_control_frame")
+            width = int(robot.data.joint_pos.shape[-1])
+            self._roll_spec += [
+                ("control_base", width, ()), ("control_target", width, ()),
+                ("control_filtered_action", n_act, ()), ("control_frame", 1, ()),
+            ]
 
     def on_step(self, env: Any) -> None:
         if not self.enabled:
@@ -73,6 +84,10 @@ class RolloutRecord:
             ],
             dim=-1,
         )
+        if self.record_control:
+            action = self._control
+            flat = torch.cat([flat, action.ref_joint_pos_used, action._target,
+                              action._hybrid_filtered, action._control_frame[:, None]], dim=-1)
         self._frames.append(flat.detach().to("cpu", torch.float32))
 
     # ── cross-batch reduction ────────────────────────────────────────────────
