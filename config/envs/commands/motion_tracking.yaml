@@ -20,17 +20,21 @@ commands:
     mode: "uniform"   # uniform | start
     start_frame: 0
 
-  # Episode-constant bias on the references served to obs and RSI; rewards keep the clean ones.
+  # Episode-constant bias on Actor/action reference paths; reset/init and rewards stay clean.
   ref_noise:
     enable: false
-    obj_trans: 0.02
-    obj_rot_deg: 6.0
-    obj_lin_vel: 0.05
-    obj_ang_vel_deg: 20.0
+    apply_to_obs: true
+    apply_to_action: true
+    apply_to_reset: false
+    obj_trans: 0.0
+    obj_rot_deg: 0.0
+    obj_lin_vel: 0.0
+    obj_ang_vel_deg: 0.0
     wrist_trans: 0.02
     wrist_rot_deg: 6.0
-    wrist_lin_vel: 0.05
-    wrist_ang_vel_deg: 20.0
+    wrist_lin_vel: 0.0
+    wrist_ang_vel_deg: 0.0
+    finger_joint: 0.0523598776  # 3 deg, per finger joint
     depenetrate: true
     depen_slack: 0.003
 

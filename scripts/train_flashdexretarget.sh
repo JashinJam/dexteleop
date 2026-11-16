@@ -24,3 +24,7 @@ args+=(
 for ov in "$@"; do args+=(--overrides "$ov"); done
 
 python train.py "${args[@]}"
+
+# Isaac Sim should be isolated to one physical GPU per process. Launch with
+# CUDA_VISIBLE_DEVICES=<physical-gpu> and pass device=cuda:0 (plus the matching
+# runner device overrides) so its CUDA/P2P setup cannot collide with other jobs.

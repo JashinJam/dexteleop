@@ -12,9 +12,9 @@ from mjlab.utils.lab_api.math import quat_apply_inverse, quat_mul
 from ..common.motion_library import MotionLibrary
 from ..common.raw_contact import register_raw_contact_views
 from ..common.sensor_multiplex import register_multi_object_sensor_views
-from .reference.noise import _quat_from_rotvec
 from .motion_tracking_base import MotionTrackingCommandBase
 from .motion_tracking_cfg import MotionTrackingCommandCfg
+from .reference.noise import _quat_from_rotvec
 
 if TYPE_CHECKING:
     from mjlab.entity import Entity
@@ -166,11 +166,15 @@ class MotionTrackingCommand(MotionTrackingCommandBase):
         joint_pos[:, self._finger_joint_ids] += _randn(len(self._finger_joint_ids)) * (
             finger_range * finger_range_frac
         )
-        # Ref-noise RSI, scaled by the depenetration alpha.
-        if self._refn_enabled:
-            a = self._refn_alpha[env_ids][:, None]
-            joint_pos[:, self._wrist_trans_ids] += self._refn_wrist_t[env_ids] * a
-            joint_pos[:, self._wrist_rot_ids] += self._refn_wrist_e[env_ids] * a
+        if self._refn_apply_reset:
+            a = self._refn_alpha[env_ids, None]
+            joint_pos[:, self._wrist_trans_ids] += (
+                self._refn_wrist_t[env_ids] * a
+            ).reshape(len(env_ids), -1)
+            joint_pos[:, self._wrist_rot_ids] += (
+                self._refn_wrist_e[env_ids] * a
+            ).reshape(len(env_ids), -1)
+            joint_pos[:, self._finger_joint_ids] += self._refn_finger[env_ids]
         joint_pos = torch.clip(joint_pos, soft_limits[:, :, 0], soft_limits[:, :, 1])
 
         joint_vel[:, self._wrist_trans_ids] += (
@@ -184,11 +188,14 @@ class MotionTrackingCommand(MotionTrackingCommandBase):
             joint_vel[:, self._finger_joint_ids] = (
                 _randn(len(self._finger_joint_ids)) * finger_vel_sigma
             )
-        if self._refn_enabled:
-            a = self._refn_alpha[env_ids][:, None]
-            joint_vel[:, self._wrist_trans_ids] += self._refn_wrist_v[env_ids] * a
-            joint_vel[:, self._wrist_rot_ids] += self._refn_wrist_av[env_ids] * a
-
+        if self._refn_apply_reset:
+            a = self._refn_alpha[env_ids, None]
+            joint_vel[:, self._wrist_trans_ids] += (
+                self._refn_wrist_v[env_ids] * a
+            ).reshape(len(env_ids), -1)
+            joint_vel[:, self._wrist_rot_ids] += (
+                self._refn_wrist_av[env_ids] * a
+            ).reshape(len(env_ids), -1)
         if self.cfg.hand.zero_init_vel:
             joint_vel = torch.zeros_like(joint_vel)
         self.robot.write_joint_state_to_sim(joint_pos, joint_vel, env_ids=env_ids)
@@ -210,8 +217,8 @@ class MotionTrackingCommand(MotionTrackingCommandBase):
                     self.motion_lib.length_starts[self.motion_ids[env_ids]]
                     + self.motion_steps[env_ids]
                 ]
-                if self._refn_enabled:
-                    a1 = self._refn_alpha[env_ids][:, None]
+                if self._refn_apply_reset:
+                    a1 = self._refn_alpha[env_ids, None]
                     obj_trans = obj_trans + self._refn_obj_t[env_ids][:, si_r] * a1
                     obj_quat = quat_mul(
                         _quat_from_rotvec(
@@ -220,9 +227,7 @@ class MotionTrackingCommand(MotionTrackingCommandBase):
                         obj_quat,
                     )
                     obj_lin_vel = obj_lin_vel + self._refn_obj_v[env_ids][:, si_r] * a1
-                    obj_ang_vel = (
-                        obj_ang_vel + self._refn_obj_av[env_ids][:, si_r] * a1
-                    )
+                    obj_ang_vel = obj_ang_vel + self._refn_obj_av[env_ids][:, si_r] * a1
                 if self.cfg.object.zero_init_vel:
                     obj_lin_vel = torch.zeros_like(obj_lin_vel)
                     obj_ang_vel = torch.zeros_like(obj_ang_vel)

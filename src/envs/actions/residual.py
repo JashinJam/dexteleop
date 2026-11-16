@@ -183,7 +183,7 @@ class ResidualAction(ActionTerm):
                 max=self._clip[:, :, 1],
             )
 
-    def _ref_joint_pos(self) -> torch.Tensor:
+    def _ref_joint_pos_clean(self) -> torch.Tensor:
         command = cast(
             MotionTrackingCommand,
             self._env.command_manager.get_term(self._command_name),
@@ -194,13 +194,22 @@ class ResidualAction(ActionTerm):
         t = (command.motion_steps - self._ref_lag).clamp(min=0)
         return ml.robot_joint_pos[ml.length_starts[command.motion_ids] + t]
 
+    def _ref_joint_pos(self) -> torch.Tensor:
+        """Reference used for action targets; reset and reward keep the clean value."""
+        command = cast(
+            MotionTrackingCommand,
+            self._env.command_manager.get_term(self._command_name),
+        )
+        return command.ref_joint_pos_action(self._ref_joint_pos_clean())
+
     def _target_parts(self) -> tuple[torch.Tensor, torch.Tensor]:
         """target = ref_action + residual_action: residual joints (ref, action * scale),
         others (0, action mapped onto the limits)."""
-        self.ref_joint_pos_used = self._ref_joint_pos()
+        self.ref_joint_pos_used = self._ref_joint_pos_clean()
+        ref_joint_pos = self._ref_joint_pos()
         action = self._processed_actions
         ref_action = torch.where(
-            self._is_residual, self.ref_joint_pos_used[:, self._all_joint_ids], 0.0
+            self._is_residual, ref_joint_pos[:, self._all_joint_ids], 0.0
         )
         residual_action = torch.where(
             self._is_residual,

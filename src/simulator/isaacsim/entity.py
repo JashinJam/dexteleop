@@ -503,22 +503,32 @@ class RigidObjectAdapter:
             pos = com.reshape(-1, 1, 3)
         else:
             pos = None
-        if self._has_is_global:
-            self._obj.set_external_force_and_torque(
-                f, t, positions=pos, env_ids=env_ids, is_global=True
-            )
-            return
-        # world -> body frame (isaaclab applies wrench in body frame)
+        # IsaacLab's global-wrench path is unstable with this Isaac Sim build
+        # when the external-wrench frame is toggled across resets.  Convert the
+        # world-frame wrench explicitly and always submit the body-frame form.
         _, quat = self._pose()
         if env_ids is not None:
             quat = quat[env_ids]
         from mjlab.utils.lab_api.math import quat_apply_inverse
 
         q = quat.unsqueeze(1)
-        self._obj.set_external_force_and_torque(
-            quat_apply_inverse(q, f), quat_apply_inverse(q, t),
-            positions=pos, env_ids=env_ids,
-        )
+        f_body = quat_apply_inverse(q, f)
+        t_body = quat_apply_inverse(q, t)
+        if self._has_is_global:
+            self._obj.set_external_force_and_torque(
+                f_body, t_body, positions=pos, env_ids=env_ids, is_global=False
+            )
+        else:
+            self._obj.set_external_force_and_torque(
+                f_body, t_body, positions=pos, env_ids=env_ids
+            )
 
     def reset(self, env_ids: torch.Tensor | None = None) -> None:
         self._obj.reset(env_ids=env_ids)
+        # IsaacLab clears the per-env wrench buffers on reset but leaves the
+        # object-level flag set.  A following scene.write_data_to_sim() would
+        # then submit an all-zero wrench to PhysX and can trigger an illegal
+        # memory access during reset.  Object assist rewrites the flag on the
+        # next simulation step when a non-zero wrench is needed.
+        if hasattr(self._obj, "has_external_wrench"):
+            self._obj.has_external_wrench = False

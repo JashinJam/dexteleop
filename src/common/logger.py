@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from datetime import datetime
 from pathlib import Path
 
@@ -53,9 +54,17 @@ def _init_wandb(wb: DictConfig, log_dir: str) -> None:
 
     tags = _resolve_tags(wb.tags)
 
+    env_project = os.environ.get("WANDB_PROJECT")
+    env_entity = os.environ.get("WANDB_ENTITY")
+    settings_kwargs = {"init_timeout": 300}
+    env_api_key = os.environ.get("WANDB_API_KEY")
+    if env_api_key:
+        # Per-process credentials take precedence over the shared ~/.netrc.
+        settings_kwargs["api_key"] = env_api_key
+
     wandb.init(
-        project=wb.project_name,
-        entity=wb.entity,
+        project=env_project or wb.project_name,
+        entity=env_entity or wb.entity,
         name=wb.run_name,
         group=wb.get("group_name"),
         job_type=wb.get("job_type"),
@@ -64,6 +73,9 @@ def _init_wandb(wb: DictConfig, log_dir: str) -> None:
         tags=tags or None,
         resume=resume_arg,
         id=resume_id,
+        # Sharpa + 512 environments can take several minutes to initialize,
+        # and the W&B proxy may need a few retries before run registration.
+        settings=wandb.Settings(**settings_kwargs),
     )
 
     if wb.resume:

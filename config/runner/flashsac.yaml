@@ -14,11 +14,13 @@ runner:
   agent:
     class_name: agents.flashsac.FlashSACAgent
     seed: ${seed}
-    device_type: "cuda"
+    # Follow the top-level Hydra device so per-GPU runs do not silently fall
+    # back to cuda:0 when LOCAL_RANK is unset.
+    device_type: ${device}
 
     buffer_max_length: 50_000_000
     buffer_min_length: 100_000
-    buffer_device_type: "cuda"
+    buffer_device_type: ${device}
     sample_batch_size: 4096
     buffer_obs_dtype: float16
     buffer_optimize_memory_usage: true

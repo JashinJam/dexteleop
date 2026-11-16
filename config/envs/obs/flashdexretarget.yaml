@@ -16,6 +16,7 @@ obs:
       dof_target_pos,
 
       # ── Ref Motion Info ────────────────────────
+      ref_robot_joint_pos,
       ref_future_mano_body_delta_w,
 
       # ── Object State (wrist frame) ─────────────
@@ -51,6 +52,7 @@ obs:
       dof_target_pos,
 
       # ── Ref Motion Info ────────────────────────
+      ref_robot_joint_pos,
       ref_future_mano_body_delta_w,
 
       # ── Object State (wrist frame) ─────────────
@@ -118,6 +120,7 @@ obs:
       ]
 
   obs_scales:
+    ref_robot_joint_pos:                   1.0
     robot_wrist_pose_w:                     1.0
     robot_wrist_lin_vel_w:                  2.0
     robot_wrist_ang_vel_w:                  0.25

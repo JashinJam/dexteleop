@@ -28,7 +28,11 @@ def run(args: argparse.Namespace) -> None:
     from isaaclab.app import AppLauncher
 
     headless = bool(cfg.get("headless", True))
-    AppLauncher({"headless": headless})
+    # Bind Isaac Sim/PhysX to the same GPU used by the torch environment.
+    # Without this explicit device, AppLauncher defaults to cuda:0 while
+    # Hydra may place the environment tensors on another GPU, causing a
+    # cross-device failure during the first reset.
+    AppLauncher({"headless": headless, "device": str(cfg.device)})
 
     from common.logger import setup_logger
     from common.utils import configure_torch_backends, set_seed

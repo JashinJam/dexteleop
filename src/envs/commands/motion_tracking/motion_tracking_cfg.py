@@ -135,14 +135,20 @@ class StaticOffsetCfg:
 class RefNoiseCfg:
 
     enable: bool = False
-    obj_trans: float = 0.02  # m
-    obj_rot_deg: float = 6.0
-    obj_lin_vel: float = 0.05  # m/s
-    obj_ang_vel_deg: float = 20.0
+    # Noise is exposed independently on observation and action reference paths.
+    # Reset/init state and reward references always stay clean.
+    apply_to_obs: bool = True
+    apply_to_action: bool = True
+    apply_to_reset: bool = False
+    obj_trans: float = 0.0  # m
+    obj_rot_deg: float = 0.0
+    obj_lin_vel: float = 0.0  # m/s
+    obj_ang_vel_deg: float = 0.0
     wrist_trans: float = 0.02  # m
     wrist_rot_deg: float = 6.0
-    wrist_lin_vel: float = 0.05  # m/s
-    wrist_ang_vel_deg: float = 20.0
+    wrist_lin_vel: float = 0.0  # m/s
+    wrist_ang_vel_deg: float = 0.0
+    finger_joint: float = 0.0523598776  # rad (3 deg), per joint across both hands
     depenetrate: bool = True
     depen_slack: float = 0.003  # m
 
